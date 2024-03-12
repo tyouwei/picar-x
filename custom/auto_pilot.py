@@ -25,13 +25,16 @@ class AutoPilot(threading.Thread):
     def run(self):
         while True:
             self.event.wait()
-            
+            print("AUTO MODE ON")
             joints = Vilib.detect_obj_parameter['body_joints']
+            print("joints")
             #person is in frame
             if joints and (len(joints) >= 12) and joints[11] and joints[12]: #11 is left shoulder point, 12 is right shoulder point
+                print("SHOULDERS DETECTED")
                 self.follower.follow(joints)
                 
                 if not self.rec_flag:
+                    print("\n\n\n\n\n\n\n\n\n\n\n\nRECORDING************************************************")
                     self.rec_flag = True
                     self.cam.start_record()
                 self.record_buffer.new_timer(time=3) #ensure every last frame recorded will always have 3 seconds buffer before video ends

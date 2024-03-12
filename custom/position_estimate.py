@@ -9,12 +9,10 @@ BT_ADDR_3 = '58:c3:56:07:b6:45'  # Beacon of this address will be (0, 10)
 DIST_MAP = {BT_ADDR_1 : 0, BT_ADDR_2 : 0, BT_ADDR_3 : 0} #hashmap with dummy values, minutely faster than array
 
 #Coordinates of the 3 beacons respectively
-P1 = (0.0,0.0) 
-P2 = (0.0,1.0)
-P3 = (1.0,0.0)
+P1 = (0.0,0.0) #for BT1 in this code
+P2 = (1.0,0.0) #for BT2 in this code
+P3 = (0.0,1.0) #for BT3 in this code
 RSSI_1M = -61
-
-points = [(0, 0), (1, 0), (0, 1)]
 
 class ScanDelegate(DefaultDelegate):
     def __init__(self):
@@ -51,7 +49,7 @@ class PositionEstimator(object):
         
         #get least squares solution because distance measured may result in singular matrix
         dynamic_point, _, _, _ = np.linalg.lstsq(unknown_matrix, constant_matrix, rcond=None) 
-        print("Dynamic point " , dynamic_point)
+        #print("Dynamic point " , dynamic_point)
         return dynamic_point
         
     
@@ -84,7 +82,7 @@ class PositionEstimator(object):
         DIST_MAP[BT_ADDR_1] = DIST_MAP[BT_ADDR_1]/bt1_count
         DIST_MAP[BT_ADDR_2] = DIST_MAP[BT_ADDR_2]/bt2_count
         DIST_MAP[BT_ADDR_3] = DIST_MAP[BT_ADDR_3]/bt3_count
-        print(DIST_MAP[BT_ADDR_3])
+        #print(DIST_MAP[BT_ADDR_3])
         return DIST_MAP
         
         
@@ -99,7 +97,7 @@ class PositionEstimator(object):
         time_start = datetime.now()
         time_now = datetime.now()
         elapsed_time = (time_now - time_start).total_seconds()
-        while (elapsed_time < 1.5 or bt1_count<1 or bt2_count<1 or bt3_count<1) :
+        while (elapsed_time < 0.75 or bt1_count<1 or bt2_count<1 or bt3_count<1) :
             devices = scanner.scan(0.1) 
             for dev in devices:
                 if dev.addr in DIST_MAP:
@@ -108,13 +106,13 @@ class PositionEstimator(object):
                     RSSI_MAP[dev.addr] += rssi
                     if dev.addr == BT_ADDR_1:
                         bt1_count += 1
-                        print("Bt1 rssi: ", rssi)
+                        #print("Bt1 rssi: ", rssi)
                     if dev.addr == BT_ADDR_2:
                         bt2_count += 1
-                        print("Bt2 rssi: ", rssi)
+                        #print("Bt2 rssi: ", rssi)
                     if dev.addr == BT_ADDR_3:
                         bt3_count += 1
-                        print("Bt3 rssi: ", rssi)
+                        #print("Bt3 rssi: ", rssi)
             time_now = datetime.now()
             elapsed_time = (time_now - time_start).total_seconds()
         #average it out
@@ -127,8 +125,8 @@ class PositionEstimator(object):
         DIST_MAP[BT_ADDR_3] = 10 ** ((RSSI_1M - RSSI_MAP[BT_ADDR_3]) / 20.0)      
         
         
-        print ("Three RSSIs: ", RSSI_MAP[BT_ADDR_1], " , ", RSSI_MAP[BT_ADDR_2], " , " , RSSI_MAP[BT_ADDR_3])
-        print ("Three Distances", DIST_MAP[BT_ADDR_1], " , ", DIST_MAP[BT_ADDR_2], " , " , DIST_MAP[BT_ADDR_3])
+        #print ("Three RSSIs: ", RSSI_MAP[BT_ADDR_1], " , ", RSSI_MAP[BT_ADDR_2], " , " , RSSI_MAP[BT_ADDR_3])
+        #print ("Three Distances", DIST_MAP[BT_ADDR_1], " , ", DIST_MAP[BT_ADDR_2], " , " , DIST_MAP[BT_ADDR_3])
         
         return DIST_MAP
          
@@ -166,7 +164,7 @@ class PositionEstimator(object):
         # Solve linear system of equations
         x = (C * E - F * B) / (E * A - B * D)
         y = (C * D - A * F) / (B * D - A * E)
-        print("Calculated x, y" , x, " , " , y)
+        #print("Calculated x, y" , x, " , " , y)
         return x, y
 
 if __name__ == '__main__':

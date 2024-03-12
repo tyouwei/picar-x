@@ -34,9 +34,9 @@ class App(object):
     
     # TODO: clear json file value after reading it
     def run(self):
+        self.mqtt_client.connect()
         last_msg_time = time.time()
         while True:
-
             try:
                 with open(JSON_FILE_PATH, 'r') as file:
                     fcntl.flock(file, fcntl.LOCK_SH)
@@ -44,7 +44,6 @@ class App(object):
                     fcntl.flock(file, fcntl.LOCK_UN)
             except json.decoder.JSONDecodeError as json_err:
                 continue
-            
             insn = data['instruction']
             self.update_bot_coordinates()
             self.update_alert_zone()
@@ -55,7 +54,7 @@ class App(object):
                     self.send_mqtt_update("Auto")
                     
                 distance = round(self.px.ultrasonic.read(), 2)
-                if distance >= SAFE_DISTANCE or distance == -1: #sensor gives -1 when it fails to receive ultrasonic feedback
+                if distance >= SAFE_DISTANCE or distance < 0: #sensor gives -1 when it fails to receive ultrasonic feedback
                     if self.is_avoiding_collision:
                         self.motor.stop()
                         self.is_avoiding_collision = False
@@ -72,6 +71,11 @@ class App(object):
                     self.motor.left()
                     self.motor.backward()
                     sleep(1)
+                    
+            elif self.mqtt_client.drive_towards_camera == True:
+                self.drive_towards_camera()
+                self.mqtt_client.drive_towards_camera = False
+                    
             else:
                 
                 time_elapsed = time.time() - last_msg_time
@@ -122,15 +126,41 @@ class App(object):
         self.alert_x2 = self.mqtt_client.x2
         self.alert_y1 = self.mqtt_client.y1
         self.alert_y2 = self.mqtt_client.y2
-        print("Trigger zone coordinates: "self.mqtt_client.x1, self.mqtt_client.x2,self.mqtt_client.y1,self.mqtt_client.y2)
+        print("Trigger zone coordinates: ", self.mqtt_client.x1, self.mqtt_client.x2,self.mqtt_client.y1,self.mqtt_client.y2)
         
     def get_cam_zone(self):
+        if self.check_color_is_white():
+            print("ITS WHITE")
+            return "urn:ngsi-ld:Camera:Camera001"
+            
         #arbitrary dummy zone for camera where cam field is x is 1 to 10, y is 1 to 10
         if self.x_coordinate < self.alert_x2 and self.y_coordinate < self.alert_y2 and self.x_coordinate > self.alert_x1 and self.y_coordinate > self.alert_y1:
             return "urn:ngsi-ld:Camera:Camera001"
+            
         else:
             return "NULL"
+            
+    def drive_towards_camera(self):
+        last_msg_time = time.time()
+        timelapse = time.time() - last_msg_time
+        self.motor.forward()
+        while timelapse < 4.5:
+            timelapse = time.time() - last_msg_time
+            if(self.get_cam_zone() == "urn:ngsi-ld:Camera:Camera001"):
+                print("Entered Cam Zone")
+                break
+            print("drive towards camera")
+        self.motor.stop()
+        json_data = {"instruction":"auto"}
+        json_object = json.dumps(json_data)
+        with open("REST/data.json", "w") as outfile:
+            print("PASSED")
+            outfile.write(json_object)
         
+    def check_color_is_white(self):
+        current_grayscale_value = self.px.get_grayscale_data()
+        return all(list(map(lambda x: x > 120, current_grayscale_value)))
+            
 
 if __name__ == '__main__':
     try:

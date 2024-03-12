@@ -18,21 +18,24 @@ class Follower(object):
         self.stalk_person(joints)
             
     def make_eye_contact(self, joints):
+        print("\n\n\n\n\n\n\nMAKING EYE CONTACT\n\n\n\n\n\n\n\n")
         # change the pan-tilt angle for track the object
-        coordinate_x = ((joints[11][0] + joints[12][0]) / 2)*640
-        coordinate_y = ((joints[11][1] + joints[12][1]) / 2)*480
-        self.x_ange(self.x_angle / 2)
-
-        self.y_angle -=(coordinate_y*10/480)-5
+        self.coordinate_x = ((joints[11][0] + joints[12][0]) / 2)*640
+        self.coordinate_y = ((joints[11][1] + joints[12][1]) / 2)*480
+        
+        self.x_angle += (self.coordinate_x*10/640)-5
+        self.x_angle = self.clamp_number(self.x_angle,-70,70)
+        print("X_ANGLE: ", self.x_angle)
+        self.px.set_cam_pan_angle(self.x_angle)
+        
+        self.y_angle -= (self.coordinate_y*10/480)-5
         self.y_angle = self.clamp_number(self.y_angle,0,80)
+        print("Y_ANGLE: ", self.y_angle)
         self.px.set_cam_tilt_angle(self.y_angle)
-        sleep(0.075)
-        
-        
-       #if coordinate_x >= 640*(3/4) or coordinate_x <= 640*(1/4):
-       #     self.motor.forward()
+        sleep(0.15)
         
     def stalk_person(self, joints):
+        print("\n\n\n\n\n\n\nTALKING\n\n\n\n\n\n\n\n")
         # proximity check
         filtered_list = list(filter(lambda x : x is not None, joints))
         x_list = list(map(lambda x : x[0], filtered_list))
@@ -44,6 +47,12 @@ class Follower(object):
         min_x = min(x_list) * 640
         human_area = (max_x - min_x) * (max_y - min_y)
         coverage_ratio = human_area / (640 * 480)
-                
-        if coverage_ratio <= 0.25:
+        print(coverage_ratio)
+        
+        self.px.set_dir_servo_angle(self.x_angle / 2)
+
+        if coverage_ratio <= 0.2 or self.coordinate_x >= 640*(3/4) or self.coordinate_x <= 640*(1/4):
+            print("\n\n\n\n\n\n\ TOO  FAR\n\n\n\n\n\n\n43edc ")
             self.motor.forward()
+        else:
+            self.motor.stop()
